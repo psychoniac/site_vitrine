@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../services/supabaseClient'
 import {
     UserIcon,
     EnvelopeIcon,
     LockClosedIcon,
     ShoppingBagIcon,
     ArrowRightOnRectangleIcon,
-    ShieldCheckIcon
+    ShieldCheckIcon,
+    ClockIcon
 } from '@heroicons/react/24/outline'
 
 export default function Profile() {
@@ -18,7 +20,34 @@ export default function Profile() {
     const [errorMsg, setErrorMsg] = useState('')
     const [loading, setLoading] = useState(false)
 
-    // Gérer la soumission du formulaire (Connexion ou Inscription)
+    // État pour les commandes
+    const [orders, setOrders] = useState([])
+    const [loadingOrders, setLoadingOrders] = useState(true)
+
+    useEffect(() => {
+        if (user) {
+            const fetchOrders = async () => {
+                try {
+                    setLoadingOrders(true)
+                    const { data, error } = await supabase
+                        .from('orders')
+                        .select('*')
+                        .eq('client_id', user.id)
+                        .order('created_at', { ascending: false })
+
+                    if (error) throw error
+                    setOrders(data || [])
+                } catch (error) {
+                    console.error('Erreur lors du chargement des commandes :', error.message)
+                } finally {
+                    setLoadingOrders(false)
+                }
+            }
+
+            fetchOrders()
+        }
+    }, [user])
+
     const handleSubmit = async (e) => {
         e.preventDefault()
         setErrorMsg('')
@@ -72,16 +101,41 @@ export default function Profile() {
                     </button>
                 </div>
 
-                {/* Historique des commandes (Squelette interactif) */}
+                {/* Historique des commandes */}
                 <div className="bg-brand-surface p-6 sm:p-8 rounded-2xl border border-slate-700 space-y-6">
                     <div className="flex items-center gap-3 border-b border-slate-700 pb-4">
                         <ShoppingBagIcon className="w-6 h-6 text-brand-accent" />
                         <h2 className="text-xl font-bold text-slate-100">Historique de mes commandes</h2>
                     </div>
 
-                    <div className="text-center py-8 text-slate-400 text-sm">
-                        Vous n'avez pas encore passé de commande. Rendez-vous dans le catalogue pour faire vos premiers achats !
-                    </div>
+                    {loadingOrders ? (
+                        <div className="text-center py-8 text-slate-400 text-sm">Chargement de vos commandes...</div>
+                    ) : orders.length === 0 ? (
+                        <div className="text-center py-8 text-slate-400 text-sm">
+                            Vous n'avez pas encore passé de commande. Rendez-vous dans le catalogue pour faire vos premiers achats !
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {orders.map((order) => (
+                                <div key={order.id} className="bg-brand-dark/50 p-4 sm:p-6 rounded-2xl border border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2 text-xs text-slate-400">
+                                            <ClockIcon className="w-4 h-4 text-brand-accent" />
+                                            <span>{new Date(order.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                                        </div>
+                                        <div className="text-sm font-mono text-slate-300">Réf : {order.id.slice(0, 8)}...</div>
+                                    </div>
+
+                                    <div className="flex items-center gap-4">
+                                        <span className="px-3 py-1 rounded-full bg-brand-accent/10 text-brand-accent text-xs font-bold uppercase tracking-wider">
+                                            {order.status}
+                                        </span>
+                                        <span className="text-lg font-extrabold text-slate-100">{order.total_amount} €</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
             </div>

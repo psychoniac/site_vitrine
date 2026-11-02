@@ -41,7 +41,7 @@ export default function Home() {
     ]
 
     return (
-        <div className="space-y-16 pb-16">
+        <div className="space-y-16 pb-16 text-blue-600 bg-brand-dark">
 
             {/* --- HERO SECTION --- */}
             <section className="relative bg-gradient-to-b from-brand-surface to-brand-dark py-20 border-b border-brand-surface">
